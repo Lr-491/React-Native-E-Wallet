@@ -1,0 +1,15 @@
+Date de création : 06/03/2026
+Heure : 23h 
+
+Ce fichier contindra toutes les dependences du insatller du projet 
+
+1- debut par l'initialisation du projet avec la commande : `npm init -y`
+
+2- Installation de express.js : npm i express
+
+3- Installation des dependences necessaires du projet : 
+    `npm i cors dotenv @neondatabase/serverless`
+
+4- Modification du type de module dans package.json pour valider les import : `"type": "module"`
+
+
