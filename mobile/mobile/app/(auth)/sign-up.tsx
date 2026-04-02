@@ -19,7 +19,7 @@ export default function Page() {
   const [error, setError] = useState<string>("");
 
   if (!isLoaded) {
-    console.log("⏳ Clerk not yet loaded...");
+    console.log("Clerk not yet loaded...");
     return null;
   }
 
@@ -29,17 +29,17 @@ export default function Page() {
     setError("");
 
     try {
-      console.log("➡️ Tentative de création de compte...");
+      console.log("Tentative de création de compte...");
       const response = await signUp.create({ emailAddress: email, password });
-      console.log("✅ Compte créé (étape 1)", response);
+      console.log("Compte créé (étape 1)", response);
 
-      console.log("➡️ Envoi du code de vérification par email...");
+      console.log("Envoi du code de vérification par email...");
       await signUp.prepareEmailAddressVerification();
-      console.log("✅ Code envoyé");
+      console.log("Code envoyé");
 
       setPendingVerification(true);
     } catch (err: any) {
-      console.error("❌ SIGNUP ERROR:", err);
+      console.error("SIGNUP ERROR:", err);
       setError(err?.errors?.[0]?.message || "Erreur lors de l'inscription");
     } finally {
       setLoading(false);
@@ -52,19 +52,19 @@ export default function Page() {
     setError("");
 
     try {
-      console.log("➡️ Vérification du code :", code);
+      console.log("Vérification du code :", code);
       const result = await signUp.attemptEmailAddressVerification({ code });
-      console.log("✅ Résultat de la tentative :", result);
+      console.log("Résultat de la tentative :", result);
 
       if (signUp.status === "complete") {
-        console.log("🎉 Session activée automatiquement");
+        console.log(" Session activée automatiquement");
         router.push("/");
       } else {
-        console.warn("⚠️ Vérification non complète, status:", signUp.status);
+        console.warn("Vérification non complète, status:", signUp.status);
         setError("La vérification n'a pas pu être complétée");
       }
     } catch (err: any) {
-      console.error("❌ VERIFY ERROR:", err);
+      console.error("VERIFY ERROR:", err);
       setError(err?.errors?.[0]?.message || "Erreur de vérification");
     } finally {
       setLoading(false);
@@ -97,7 +97,7 @@ export default function Page() {
           disabled={loading}
         >
           <Text style={styles.buttonText}>
-            {loading ? "⏳ Vérification..." : "Vérifier"}
+            {loading ? "Vérification..." : "Vérifier"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -150,7 +150,7 @@ export default function Page() {
           disabled={loading}
         >
           <Text style={styles.buttonText}>
-            {loading ? "⏳ Création..." : "S'inscrire"}
+            {loading ? "Création..." : "S'inscrire"}
           </Text>
         </TouchableOpacity>
 
