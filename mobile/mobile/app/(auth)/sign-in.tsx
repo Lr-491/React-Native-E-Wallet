@@ -1,9 +1,12 @@
 // import { Text } from '@/components/themed-text'
 // import { View } from '@/components/themed-view'
-import { useSignIn } from '@clerk/expo'
+import { styles } from '@/assets/styles/auth.styles'
+import { COLORS } from '@/constants/colors'
+import { useSignIn } from '@clerk/clerk-expo'
+import { Ionicons } from '@expo/vector-icons'
 import { type Href, Link, useRouter } from 'expo-router'
 import React from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
 export default function Page() {
   const { signIn, errors, fetchStatus } = useSignIn()
@@ -12,6 +15,7 @@ export default function Page() {
   const [emailAddress, setEmailAddress] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [code, setCode] = React.useState('')
+  const [ error, setError ] = React.useState("")
 
   const handleSubmit = async () => {
     const { error } = await signIn.password({
@@ -126,12 +130,24 @@ export default function Page() {
 
   return (
     <View style={styles.container}>
-      <Text type="title" style={styles.title}>
-        Sign in
+      <Image source={require("../../assets/images/revenue-i4.png")} style={styles.illustration}/>
+
+      {error ? (
+        <View style={styles.errorBox}>
+          <Ionicons name="alert-circle" size={20} color={COLORS.expense} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={() => setError("")}>
+            <Ionicons name="close" size={20} color={COLORS.textLight} />
+          </TouchableOpacity>
+        </View>
+      ) : null }
+
+      <Text style={styles.title}>
+        Welcome Back
       </Text>
-      <Text style={styles.label}>Email address</Text>
+      {/* <Text style={styles.label}>Email address</Text> */}
       <TextInput
-        style={styles.input}
+        style={[styles.input, error && styles.errorInput]}
         autoCapitalize="none"
         value={emailAddress}
         placeholder="Enter email"
@@ -142,9 +158,9 @@ export default function Page() {
       {errors.fields.identifier && (
         <Text style={styles.error}>{errors.fields.identifier.message}</Text>
       )}
-      <Text style={styles.label}>Password</Text>
+      {/* <Text style={styles.label}>Password</Text> */}
       <TextInput
-        style={styles.input}
+        style={[styles.input, error && styles.errorInput]}
         value={password}
         placeholder="Enter password"
         placeholderTextColor="#666666"
@@ -154,94 +170,90 @@ export default function Page() {
       {errors.fields.password && (
         <Text style={styles.error}>{errors.fields.password.message}</Text>
       )}
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          (!emailAddress || !password || fetchStatus === 'fetching') && styles.buttonDisabled,
-          pressed && styles.buttonPressed,
-        ]}
+      <TouchableOpacity
+        style={styles.button}
         onPress={handleSubmit}
         disabled={!emailAddress || !password || fetchStatus === 'fetching'}
       >
         <Text style={styles.buttonText}>Continue</Text>
-      </Pressable>
+      </TouchableOpacity>
       {/* For your debugging purposes. You can just console.log errors, but we put them in the UI for convenience */}
       {/* {errors && <Text style={styles.debug}>{JSON.stringify(errors, null, 2)}</Text>} */}
 
-      <View style={styles.linkContainer}>
-        <Text>Don't have an account? </Text>
+      <View style={styles.footerContainer}>
+        <Text style={styles.footerText}>Don't have an account? </Text>
         <Link href="/sign-up">
-          <Text type="link">Sign up</Text>
+          <Text style={styles.linkText}>Sign up</Text>
         </Link>
       </View>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    gap: 12,
-  },
-  title: {
-    marginBottom: 8,
-  },
-  label: {
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonPressed: {
-    opacity: 0.7,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  secondaryButtonText: {
-    color: '#0a7ea4',
-    fontWeight: '600',
-  },
-  linkContainer: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  error: {
-    color: '#d32f2f',
-    fontSize: 12,
-    marginTop: -8,
-  },
-  debug: {
-    fontSize: 10,
-    opacity: 0.5,
-    marginTop: 8,
-  },
-})
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     padding: 20,
+//     gap: 12,
+//   },
+//   title: {
+//     marginBottom: 8,
+//   },
+//   label: {
+//     fontWeight: '600',
+//     fontSize: 14,
+//   },
+//   input: {
+//     borderWidth: 1,
+//     borderColor: '#ccc',
+//     borderRadius: 8,
+//     padding: 12,
+//     fontSize: 16,
+//     backgroundColor: '#fff',
+//   },
+//   button: {
+//     backgroundColor: '#0a7ea4',
+//     paddingVertical: 12,
+//     paddingHorizontal: 24,
+//     borderRadius: 8,
+//     alignItems: 'center',
+//     marginTop: 8,
+//   },
+//   buttonPressed: {
+//     opacity: 0.7,
+//   },
+//   buttonDisabled: {
+//     opacity: 0.5,
+//   },
+//   buttonText: {
+//     color: '#fff',
+//     fontWeight: '600',
+//   },
+//   secondaryButton: {
+//     paddingVertical: 12,
+//     paddingHorizontal: 24,
+//     borderRadius: 8,
+//     alignItems: 'center',
+//     marginTop: 8,
+//   },
+//   secondaryButtonText: {
+//     color: '#0a7ea4',
+//     fontWeight: '600',
+//   },
+//   linkContainer: {
+//     flexDirection: 'row',
+//     gap: 4,
+//     marginTop: 12,
+//     alignItems: 'center',
+//   },
+//   error: {
+//     color: '#d32f2f',
+//     fontSize: 12,
+//     marginTop: -8,
+//   },
+//   debug: {
+//     fontSize: 10,
+//     opacity: 0.5,
+//     marginTop: 8,
+//   },
+// })

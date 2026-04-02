@@ -16,7 +16,7 @@ export default function Page() {
 
   return (
     <View style={styles.container}>
-      <Text type="title">Welcome!</Text>
+      <Text>Welcome!</Text>
       <Show when="signed-out">
         <Link href="/(auth)/sign-in">
           <Text>Sign in</Text>

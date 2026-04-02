@@ -1,228 +1,168 @@
-// import { Text } from '@/components/themed-text'
-// import { View } from '@/components/themed-view'
-import { useAuth, useSignUp } from '@clerk/expo'
-import { type Href, Link, useRouter } from 'expo-router'
-import React from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useSignUp } from "@clerk/clerk-expo";
+import { Link, useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { styles } from "@/assets/styles/auth.styles";
+import { COLORS } from "@/constants/colors";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
 export default function Page() {
-  const { signUp, errors, fetchStatus } = useSignUp()
-  const { isSignedIn } = useAuth()
-  const router = useRouter()
+  const { isLoaded, signUp } = useSignUp();
+  const router = useRouter();
 
-  const [emailAddress, setEmailAddress] = React.useState('')
-  const [password, setPassword] = React.useState('')
-  const [pendingVerification, setPendingVerification] = React.useState(false)
-  const [code, setCode] = React.useState('')
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [code, setCode] = useState<string>("");
+  const [pendingVerification, setPendingVerification] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
 
-  const handleSubmit = async () => {
-    const { error } = await signUp.password({
-      emailAddress,
-      password,
-    })
-    if (error) {
-      console.error(JSON.stringify(error, null, 2))
-      return
+  if (!isLoaded) {
+    console.log("⏳ Clerk not yet loaded...");
+    return null;
+  }
+
+  // Étape 1 : création de l'utilisateur
+  const handleSignUp = async (): Promise<void> => {
+    setLoading(true);
+    setError("");
+
+    try {
+      console.log("➡️ Tentative de création de compte...");
+      const response = await signUp.create({ emailAddress: email, password });
+      console.log("✅ Compte créé (étape 1)", response);
+
+      console.log("➡️ Envoi du code de vérification par email...");
+      await signUp.prepareEmailAddressVerification();
+      console.log("✅ Code envoyé");
+
+      setPendingVerification(true);
+    } catch (err: any) {
+      console.error("❌ SIGNUP ERROR:", err);
+      setError(err?.errors?.[0]?.message || "Erreur lors de l'inscription");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (!error) await signUp.verifications.sendEmailCode()
-    //Set 'PendingVerification' to true to display second form
-    //And capture OTP code
-    setPendingVerification(true)
-  }
+  // Étape 2 : vérification du code
+  const handleVerify = async (): Promise<void> => {
+    setLoading(true);
+    setError("");
 
-  const handleVerify = async () => {
-    await signUp.verifications.verifyEmailCode({
-      code,
-    })
-    if (signUp.status === 'complete') {
-      await signUp.finalize({
-        // Redirect the user to the home page after signing up
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            // Handle pending session tasks
-            // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
-            console.log(session?.currentTask)
-            return
-          }
+    try {
+      console.log("➡️ Vérification du code :", code);
+      const result = await signUp.attemptEmailAddressVerification({ code });
+      console.log("✅ Résultat de la tentative :", result);
 
-          const url = decorateUrl('/')
-          if (url.startsWith('http')) {
-            window.location.href = url
-          } else {
-            router.push(url as Href)
-          }
-        },
-      })
-    } else {
-      // Check why the sign-up is not complete
-      console.error('Sign-up attempt not complete:', signUp)
+      if (signUp.status === "complete") {
+        console.log("🎉 Session activée automatiquement");
+        router.push("/");
+      } else {
+        console.warn("⚠️ Vérification non complète, status:", signUp.status);
+        setError("La vérification n'a pas pu être complétée");
+      }
+    } catch (err: any) {
+      console.error("❌ VERIFY ERROR:", err);
+      setError(err?.errors?.[0]?.message || "Erreur de vérification");
+    } finally {
+      setLoading(false);
     }
-  }
-
-  if (signUp.status === 'complete' || isSignedIn) {
-    return null
-  }
+  };
 
   if (pendingVerification) {
     return (
-      <View style={styles.container}>
-        <Text type="title" style={styles.title}>
-          Verify your account
-        </Text>
+      <View style={styles.verificationContainer}>
+        <Text style={styles.verificationTitle}>Vérification du compte</Text>
+
+        {error && (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={20} color={COLORS.expense} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         <TextInput
-          style={styles.input}
+          style={styles.verificationInput}
           value={code}
-          placeholder="Enter your verification code"
-          placeholderTextColor="#666666"
-          onChangeText={(code) => setCode(code)}
+          onChangeText={setCode}
+          placeholder="Entrez le code reçu par email"
           keyboardType="numeric"
         />
-        {errors.fields.code && (
-          <Text style={styles.error}>{errors.fields.code.message}</Text>
-        )}
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            fetchStatus === 'fetching' && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
+
+        <TouchableOpacity
+          style={[styles.button, loading && { opacity: 0.5 }]}
           onPress={handleVerify}
-          disabled={fetchStatus === 'fetching'}
+          disabled={loading}
         >
-          <Text style={styles.buttonText}>Verify</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
-          onPress={() => signUp.verifications.sendEmailCode()}
-        >
-          <Text style={styles.secondaryButtonText}>I need a new code</Text>
-        </Pressable>
+          <Text style={styles.buttonText}>
+            {loading ? "⏳ Vérification..." : "Vérifier"}
+          </Text>
+        </TouchableOpacity>
       </View>
-    )
+    );
   }
 
+  // 🔹 UI inscription
   return (
-    <View style={styles.container}>
-      <Text type="title" style={styles.title}>
-        Sign up
-      </Text>
-      <Text style={styles.label}>Email address</Text>
-      <TextInput
-        style={styles.input}
-        autoCapitalize="none"
-        value={emailAddress}
-        placeholder="Enter email"
-        placeholderTextColor="#666666"
-        onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-        keyboardType="email-address"
-      />
-      {errors.fields.emailAddress && (
-        <Text style={styles.error}>{errors.fields.emailAddress.message}</Text>
-      )}
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        style={styles.input}
-        value={password}
-        placeholder="Enter password"
-        placeholderTextColor="#666666"
-        secureTextEntry={true}
-        onChangeText={(password) => setPassword(password)}
-      />
-      {errors.fields.password && (
-        <Text style={styles.error}>{errors.fields.password.message}</Text>
-      )}
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          (!emailAddress || !password || fetchStatus === 'fetching') && styles.buttonDisabled,
-          pressed && styles.buttonPressed,
-        ]}
-        onPress={handleSubmit}
-        disabled={!emailAddress || !password || fetchStatus === 'fetching'}
-      >
-        <Text style={styles.buttonText}>Sign up</Text>
-      </Pressable>
-      {/* For your debugging purposes. You can just console.log errors, but we put them in the UI for convenience */}
-      {/* {errors && <Text style={styles.debug}>{JSON.stringify(errors, null, 2)}</Text>} */}
+    <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1 }}
+      enableOnAndroid={true}
+      enableAutomaticScroll={true}
+      keyboardShouldPersistTaps="handled"
+      extraScrollHeight={100}
+    >
+      <View style={styles.container}>
+        <Image
+          source={require("../../assets/images/revenue-i2.png")}
+          style={styles.illustration}
+        />
+        <Text style={styles.title}>Créer un compte</Text>
 
-      <View style={styles.linkContainer}>
-        <Text>Already have an account? </Text>
-        <Link href="/sign-in">
-          <Text type="link">Sign in</Text>
-        </Link>
+        {error && (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={20} color={COLORS.expense} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        <TextInput
+          style={styles.input}
+          placeholder="Votre email"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Votre mot de passe"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+
+        <TouchableOpacity
+          style={[styles.button, loading && { opacity: 0.5 }]}
+          onPress={handleSignUp}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "⏳ Création..." : "S'inscrire"}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.footerContainer}>
+          <Text style={styles.footerText}>Déjà un compte ? </Text>
+          <Link href="/sign-in">
+            <Text style={styles.linkText}>Se connecter</Text>
+          </Link>
+        </View>
+
+        <View nativeID="clerk-captcha" />
       </View>
-
-      {/* Required for sign-up flows. Clerk's bot sign-up protection is enabled by default */}
-      <View nativeID="clerk-captcha" />
-    </View>
-  )
+    </KeyboardAwareScrollView>
+  );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    gap: 12,
-  },
-  title: {
-    marginBottom: 8,
-  },
-  label: {
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonPressed: {
-    opacity: 0.7,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  secondaryButtonText: {
-    color: '#0a7ea4',
-    fontWeight: '600',
-  },
-  linkContainer: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  error: {
-    color: '#d32f2f',
-    fontSize: 12,
-    marginTop: -8,
-  },
-  debug: {
-    fontSize: 10,
-    opacity: 0.5,
-    marginTop: 8,
-  },
-})
