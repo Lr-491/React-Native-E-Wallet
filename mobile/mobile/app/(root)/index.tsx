@@ -1,19 +1,25 @@
 import { SignOutButton } from '@/components/SignOutButton'
-// import { Text } from '@/components/themed-text'
-// import { View } from '@/components/themed-view'
+import useTransactions from '@/hooks/useTransactions';
 import { Show, useSession, useUser } from '@clerk/expo'
 import { Link } from 'expo-router'
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native'
 
 export default function Page() {
-  const { user } = useUser()
+  const { user } = useUser();
+  const { session } = useSession();
+  console.log("New Session",session?.currentTask);
+  console.log("userid",user?.id);
 
-  // If your user isn't appearing as signed in,
-  // it's possible they have session tasks to complete.
-  // Learn more: https://clerk.com/docs/guides/configure/session-tasks
-  const { session } = useSession()
-  console.log(session?.currentTask)
+  const { transactions, summary, isLoading, loadData, deleteTransaction} = useTransactions(user?.id);
 
+  useEffect(() => {
+    loadData();
+  },[loadData]);
+
+  console.log("transaction :", transactions);
+  console.log("summary :", summary);
+  
   return (
     <View style={styles.container}>
       <Text>Welcome!</Text>

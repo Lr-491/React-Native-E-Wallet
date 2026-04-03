@@ -1,37 +1,10 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import { sql } from './config/db.js';
+import expenses from "express";
+import { sql } from "../config/db.js";
 
-dotenv.config()
+const router = expenses.Router();
 
-const app = express()
-app.use(express.json());
 
-const PORT = process.env.PORT || 5000
-
-// INITIALIZED DATABASE
-async function initDB() {
-   try {
-      await sql`CREATE TABLE IF NOT EXISTS transaction(
-         id SERIAL PRIMARY KEY,
-         user_id VARCHAR(255) NOT NULL,
-         title VARCHAR(255) NOT NULL,
-         amount DECIMAL(10,2) NOT NULL,
-         category VARCHAR(255) NOT NULL,
-         created_at DATE NOT NULL DEFAULT CURRENT_DATE
-      )`;
-      console.log("DATABASE INITIALIZED SUCCEFULLY")
-   } catch (error) {
-      console.log("Error initializing DB", error);
-      process.exit(1); // status code 1 means failure, 0 succes
-   }
-};
-
-app.get('/', (req, res) => {
-   res.send('server working')
-});
-
-app.get('/api/transactions/:userId', async (req, res) => {
+router.get('/:userId', async (req, res) => {
    try {
       const { userId } = req.params; 
       const transaction = await sql `
@@ -45,7 +18,7 @@ app.get('/api/transactions/:userId', async (req, res) => {
    }
 });
 
-app.post('/api/transactions' , async (req , res)=>{
+router.post('/' , async (req , res)=>{
 
    try {
       const { user_id,title, amount, category} = req.body;
@@ -68,7 +41,7 @@ app.post('/api/transactions' , async (req , res)=>{
    }
 });
 
-app.delete('/api/transactions/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
    try {
       const { id } = req.params;
 
@@ -92,7 +65,7 @@ app.delete('/api/transactions/:id', async (req, res) => {
    }
 });
 
-app.get('/api/transactions/summary/:userId', async (req, res) => {
+router.get('/summary/:userId', async (req, res) => {
    try {
       const { userId } = req.params;
 
@@ -117,8 +90,6 @@ app.get('/api/transactions/summary/:userId', async (req, res) => {
    }
 })
 
-initDB().then(() => {
-   app.listen(PORT , ()=> 
-      console.log('> Server is up and running on port : ' + PORT)
-   )
-});
+
+
+export default router;

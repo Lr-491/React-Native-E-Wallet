@@ -1,259 +1,248 @@
-// import { Text } from '@/components/themed-text'
-// import { View } from '@/components/themed-view'
 import { styles } from '@/assets/styles/auth.styles'
 import { COLORS } from '@/constants/colors'
-import { useSignIn } from '@clerk/clerk-expo'
+import { useClerk, useSignIn } from '@clerk/expo'
 import { Ionicons } from '@expo/vector-icons'
-import { type Href, Link, useRouter } from 'expo-router'
+import { Link, useRouter } from 'expo-router'
 import React from 'react'
-import { Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 
 export default function Page() {
-  const { signIn, errors, fetchStatus } = useSignIn()
+  // ✅ Clerk v3 : signIn vient de useSignIn, setActive vient de useClerk
+  const { signIn } = useSignIn()
+  const { setActive } = useClerk()
   const router = useRouter()
 
+  // --- États du formulaire ---
   const [emailAddress, setEmailAddress] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [code, setCode] = React.useState('')
-  const [ error, setError ] = React.useState("")
 
+  // --- États UI ---
+  const [loading, setLoading] = React.useState(false)
+  const [error, setError] = React.useState('')
+  const [pendingMFA, setPendingMFA] = React.useState(false) // true = affiche l'écran MFA (double authentification)
+
+  // ─────────────────────────────────────────────
+  // ÉTAPE 1 : Connexion avec email + mot de passe
+  // ─────────────────────────────────────────────
   const handleSubmit = async () => {
-    const { error } = await signIn.password({
-      emailAddress,
-      password,
-    })
-    if (error) {
-      console.error(JSON.stringify(error, null, 2))
-      return
-    }
+    setLoading(true)
+    setError('')
 
-    if (signIn.status === 'complete') {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            // Handle pending session tasks
-            // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
-            console.log(session?.currentTask)
-            return
-          }
+    try {
+      console.log('Tentative de connexion...')
+      console.log('Email :', emailAddress, '| Password :', password)
 
-          const url = decorateUrl('/')
-          if (url.startsWith('http')) {
-            window.location.href = url
-          } else {
-            router.push(url as Href)
-          }
-        },
+      // Connexion avec email + mot de passe (API Clerk v3)
+      const { error } = await signIn.password({
+        emailAddress,
+        password,
       })
-    } else if (signIn.status === 'needs_second_factor') {
-      // See https://clerk.com/docs/guides/development/custom-flows/authentication/multi-factor-authentication
-    } else if (signIn.status === 'needs_client_trust') {
-      // For other second factor strategies,
-      // see https://clerk.com/docs/guides/development/custom-flows/authentication/client-trust
-      const emailCodeFactor = signIn.supportedSecondFactors.find(
-        (factor) => factor.strategy === 'email_code',
-      )
 
-      if (emailCodeFactor) {
-        await signIn.mfa.sendEmailCode()
+      // Si Clerk retourne une erreur (ex: mauvais mot de passe, compte inexistant...)
+      if (error) {
+        console.error('SIGNIN ERROR (error field):', JSON.stringify(error, null, 2))
+        setError(error.message || 'Email ou mot de passe incorrect')
+        return
       }
-    } else {
-      // Check why the sign-in is not complete
-      console.error('Sign-in attempt not complete:', signIn)
+
+      console.log('Connexion réussie ✅ | signIn.status :', signIn.status)
+
+      if (signIn.status === 'complete') {
+        console.log('Session activée ✅ — redirection vers /')
+
+        // Active la session côté client pour que isSignedIn passe à true
+        await setActive({ session: signIn.createdSessionId })
+
+        router.replace('/')
+
+      } else if (signIn.status === 'needs_second_factor' || signIn.status === 'needs_client_trust') {
+        // L'utilisateur doit passer par une double authentification (MFA)
+        console.log('MFA requis — envoi du code email...')
+
+        const emailCodeFactor = signIn.supportedSecondFactors?.find(
+          (factor) => factor.strategy === 'email_code',
+        )
+
+        if (emailCodeFactor) {
+          await signIn.mfa.sendEmailCode()
+          console.log('Code MFA envoyé ✅')
+          setPendingMFA(true)
+        }
+
+      } else {
+        console.error('Connexion non complète, status:', signIn.status)
+        setError('La connexion n\'a pas pu être complétée')
+      }
+
+    } catch (err: any) {
+      console.error('SIGNIN ERROR:', JSON.stringify(err, null, 2))
+      setError(err?.errors?.[0]?.message || 'Erreur lors de la connexion')
+    } finally {
+      setLoading(false)
     }
   }
 
+  // ─────────────────────────────────────────────
+  // ÉTAPE 2 (optionnelle) : Vérification MFA
+  // Affiché uniquement si la double auth est activée
+  // ─────────────────────────────────────────────
   const handleVerify = async () => {
-    await signIn.mfa.verifyEmailCode({ code })
+    setLoading(true)
+    setError('')
 
-    if (signIn.status === 'complete') {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) {
-            // Handle pending session tasks
-            // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
-            console.log(session?.currentTask)
-            return
-          }
+    try {
+      console.log('Vérification du code MFA :', code)
 
-          const url = decorateUrl('/')
-          if (url.startsWith('http')) {
-            window.location.href = url
-          } else {
-            router.push(url as Href)
-          }
-        },
-      })
-    } else {
-      // Check why the sign-in is not complete
-      console.error('Sign-in attempt not complete:', signIn)
+      await signIn.mfa.verifyEmailCode({ code })
+
+      console.log('Code MFA vérifié ✅ | signIn.status :', signIn.status)
+
+      if (signIn.status === 'complete') {
+        console.log('Session activée ✅ — redirection vers /')
+
+        // Active la session après vérification MFA
+        await setActive({ session: signIn.createdSessionId })
+
+        router.replace('/')
+      } else {
+        console.warn('Vérification MFA non complète, status:', signIn.status)
+        setError('La vérification n\'a pas pu être complétée')
+      }
+
+    } catch (err: any) {
+      console.error('VERIFY MFA ERROR:', JSON.stringify(err, null, 2))
+      setError(err?.errors?.[0]?.message || 'Erreur de vérification')
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (signIn.status === 'needs_client_trust') {
+  // ─────────────────────────────────────────────
+  // ÉCRAN 2 (optionnel) : Vérification MFA
+  // ─────────────────────────────────────────────
+  if (pendingMFA) {
     return (
-      <View style={styles.container}>
-        <Text type="title" style={styles.title}>
-          Verify your account
+      <View style={styles.verificationContainer}>
+        <Text style={styles.verificationTitle}>Vérification requise</Text>
+        <Text style={{ textAlign: 'center', color: '#666', marginBottom: 16 }}>
+          Un code a été envoyé à {emailAddress}
         </Text>
+
+        {/* Affichage des erreurs */}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={20} color={COLORS.expense} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        {/* Champ de saisie du code MFA */}
         <TextInput
-          style={styles.input}
+          style={styles.verificationInput}
           value={code}
-          placeholder="Enter your verification code"
+          placeholder="Entrez le code reçu par email"
           placeholderTextColor="#666666"
-          onChangeText={(code) => setCode(code)}
+          onChangeText={setCode}
           keyboardType="numeric"
+          autoFocus
         />
-        {errors.fields.code && (
-          <Text style={styles.error}>{errors.fields.code.message}</Text>
-        )}
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            fetchStatus === 'fetching' && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
+
+        {/* Bouton de vérification */}
+        <TouchableOpacity
+          style={[styles.button, (loading || code.length === 0) && { opacity: 0.5 }]}
           onPress={handleVerify}
-          disabled={fetchStatus === 'fetching'}
+          disabled={loading || code.length === 0}
         >
-          <Text style={styles.buttonText}>Verify</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+          <Text style={styles.buttonText}>
+            {loading ? 'Vérification...' : 'Vérifier'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Renvoyer le code MFA */}
+        <TouchableOpacity
           onPress={() => signIn.mfa.sendEmailCode()}
+          style={{ marginTop: 16, alignItems: 'center' }}
         >
-          <Text style={styles.secondaryButtonText}>I need a new code</Text>
-        </Pressable>
+          <Text style={{ color: COLORS.primary || '#0a7ea4', fontWeight: '600' }}>
+            Renvoyer le code
+          </Text>
+        </TouchableOpacity>
       </View>
     )
   }
 
+  // ─────────────────────────────────────────────
+  // ÉCRAN 1 : Formulaire de connexion
+  // ─────────────────────────────────────────────
   return (
-    <View style={styles.container}>
-      <Image source={require("../../assets/images/revenue-i4.png")} style={styles.illustration}/>
+    <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1 }}
+      enableOnAndroid={true}
+      enableAutomaticScroll={true}
+      keyboardShouldPersistTaps="handled"
+      extraScrollHeight={100}
+    >
+      <View style={styles.container}>
+        <Image
+          source={require('../../assets/images/revenue-i4.png')}
+          style={styles.illustration}
+        />
+        <Text style={styles.title}>Welcome Back</Text>
 
-      {error ? (
-        <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={20} color={COLORS.expense} />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={() => setError("")}>
-            <Ionicons name="close" size={20} color={COLORS.textLight} />
-          </TouchableOpacity>
+        {/* Affichage des erreurs avec bouton de fermeture */}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle" size={20} color={COLORS.expense} />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={() => setError('')}>
+              <Ionicons name="close" size={20} color={COLORS.textLight} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {/* Champ email */}
+        <TextInput
+          style={[styles.input, error && styles.errorInput]}
+          autoCapitalize="none"
+          value={emailAddress}
+          placeholder="Votre email"
+          placeholderTextColor="#666666"
+          onChangeText={setEmailAddress}
+          keyboardType="email-address"
+        />
+
+        {/* Champ mot de passe */}
+        <TextInput
+          style={[styles.input, error && styles.errorInput]}
+          value={password}
+          placeholder="Votre mot de passe"
+          placeholderTextColor="#666666"
+          secureTextEntry={true}
+          onChangeText={setPassword}
+        />
+
+        {/* Bouton connexion — désactivé si email/password vides ou chargement en cours */}
+        <TouchableOpacity
+          style={[styles.button, (!emailAddress || !password || loading) && { opacity: 0.5 }]}
+          onPress={handleSubmit}
+          disabled={!emailAddress || !password || loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? 'Connexion...' : 'Se connecter'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Lien vers la page d'inscription */}
+        <View style={styles.footerContainer}>
+          <Text style={styles.footerText}>Pas encore de compte ? </Text>
+          <Link href="/sign-up">
+            <Text style={styles.linkText}>S'inscrire</Text>
+          </Link>
         </View>
-      ) : null }
-
-      <Text style={styles.title}>
-        Welcome Back
-      </Text>
-      {/* <Text style={styles.label}>Email address</Text> */}
-      <TextInput
-        style={[styles.input, error && styles.errorInput]}
-        autoCapitalize="none"
-        value={emailAddress}
-        placeholder="Enter email"
-        placeholderTextColor="#666666"
-        onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-        keyboardType="email-address"
-      />
-      {errors.fields.identifier && (
-        <Text style={styles.error}>{errors.fields.identifier.message}</Text>
-      )}
-      {/* <Text style={styles.label}>Password</Text> */}
-      <TextInput
-        style={[styles.input, error && styles.errorInput]}
-        value={password}
-        placeholder="Enter password"
-        placeholderTextColor="#666666"
-        secureTextEntry={true}
-        onChangeText={(password) => setPassword(password)}
-      />
-      {errors.fields.password && (
-        <Text style={styles.error}>{errors.fields.password.message}</Text>
-      )}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleSubmit}
-        disabled={!emailAddress || !password || fetchStatus === 'fetching'}
-      >
-        <Text style={styles.buttonText}>Continue</Text>
-      </TouchableOpacity>
-      {/* For your debugging purposes. You can just console.log errors, but we put them in the UI for convenience */}
-      {/* {errors && <Text style={styles.debug}>{JSON.stringify(errors, null, 2)}</Text>} */}
-
-      <View style={styles.footerContainer}>
-        <Text style={styles.footerText}>Don't have an account? </Text>
-        <Link href="/sign-up">
-          <Text style={styles.linkText}>Sign up</Text>
-        </Link>
       </View>
-    </View>
+    </KeyboardAwareScrollView>
   )
 }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     padding: 20,
-//     gap: 12,
-//   },
-//   title: {
-//     marginBottom: 8,
-//   },
-//   label: {
-//     fontWeight: '600',
-//     fontSize: 14,
-//   },
-//   input: {
-//     borderWidth: 1,
-//     borderColor: '#ccc',
-//     borderRadius: 8,
-//     padding: 12,
-//     fontSize: 16,
-//     backgroundColor: '#fff',
-//   },
-//   button: {
-//     backgroundColor: '#0a7ea4',
-//     paddingVertical: 12,
-//     paddingHorizontal: 24,
-//     borderRadius: 8,
-//     alignItems: 'center',
-//     marginTop: 8,
-//   },
-//   buttonPressed: {
-//     opacity: 0.7,
-//   },
-//   buttonDisabled: {
-//     opacity: 0.5,
-//   },
-//   buttonText: {
-//     color: '#fff',
-//     fontWeight: '600',
-//   },
-//   secondaryButton: {
-//     paddingVertical: 12,
-//     paddingHorizontal: 24,
-//     borderRadius: 8,
-//     alignItems: 'center',
-//     marginTop: 8,
-//   },
-//   secondaryButtonText: {
-//     color: '#0a7ea4',
-//     fontWeight: '600',
-//   },
-//   linkContainer: {
-//     flexDirection: 'row',
-//     gap: 4,
-//     marginTop: 12,
-//     alignItems: 'center',
-//   },
-//   error: {
-//     color: '#d32f2f',
-//     fontSize: 12,
-//     marginTop: -8,
-//   },
-//   debug: {
-//     fontSize: 10,
-//     opacity: 0.5,
-//     marginTop: 8,
-//   },
-// })

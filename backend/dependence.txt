@@ -12,4 +12,10 @@ Ce fichier contindra toutes les dependences du insatller du projet
 
 4- Modification du type de module dans package.json pour valider les import : `"type": "module"`
 
+5- Installation de nodemon pour eviter de relancer le server : `npm i -D nodemon`
 
+
+
+utilisation de neon database comme base de données et de clerk pour accelerer authentification utilisateur
+
+Neon est une base de données PostgreSQL moderne, entièrement gérée et sans serveur (serverless), conçue pour le cloud. Elle sépare le calcul du stockage pour permettre une mise à l'échelle automatique, des ramifications (branching) rapides et un stockage illimité, idéale pour les développeurs et les applications web modernes
