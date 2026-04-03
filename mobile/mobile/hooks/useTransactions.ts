@@ -5,7 +5,8 @@ import { Alert } from "react-native";
 // CONFIGURATION
 // ─────────────────────────────────────────────
 
-const API = "http://localhost:4000/api";
+// const API = "http://localhost:4000/api";
+const API = "https://react-native-e-wallet.onrender.com/api";
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -23,9 +24,9 @@ export interface Transaction {
 
 // Type du résumé financier
 export interface Summary {
-  balance: number;
-  income: number;
-  expenses: number;
+  balance: number ;
+  income: number ;
+  expenses: number ;
 }
 
 // ─────────────────────────────────────────────

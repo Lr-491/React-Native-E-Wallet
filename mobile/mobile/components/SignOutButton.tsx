@@ -1,7 +1,10 @@
 // import { ThemedText } from '@/components/themed-text'
+import { styles } from '@/assets/styles/home.styles'
+import { COLORS } from '@/constants/colors'
 import { useClerk } from '@clerk/expo'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { Pressable, StyleSheet, Text } from 'react-native'
+import { Alert, Pressable, StyleSheet, Text, TouchableOpacity } from 'react-native'
 
 export const SignOutButton = () => {
   // Use useClerk() to access the signOut() function
@@ -9,41 +12,28 @@ export const SignOutButton = () => {
   const router = useRouter()
 
   const handleSignOut = async () => {
-    try {
-      await signOut()
-      // Redirect to your desired page
-      router.replace('/')
-    } catch (err) {
-      // See https://clerk.com/docs/guides/development/custom-flows/error-handling
-      // for more info on error handling
-      console.error(JSON.stringify(err, null, 2))
-    }
+
+    Alert.alert("Logout", "Arre you sure, you want to logout ?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", style: "destructive", onPress: signOut }
+    ])
+    // try {
+    //   await signOut()
+    //   // Redirect to your desired page
+    //   router.replace('/')
+    // } catch (err) {
+    //   // See https://clerk.com/docs/guides/development/custom-flows/error-handling
+    //   // for more info on error handling
+    //   console.error(JSON.stringify(err, null, 2))
+    // }
   }
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+    <TouchableOpacity
+      style={styles.logoutButton}
       onPress={handleSignOut}
     >
-      <Text style={styles.buttonText}>Sign out</Text>
-    </Pressable>
+      <Ionicons name='log-out-outline' size={22} color={COLORS.text}/>
+    </TouchableOpacity>
   )
 }
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonPressed: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-})
