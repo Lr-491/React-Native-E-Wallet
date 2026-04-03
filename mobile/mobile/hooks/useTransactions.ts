@@ -67,7 +67,7 @@ const useTransactions = (userId: string) => {
       const data: Transaction[] = await response.json();
 
       setTransactions(data);
-      console.log("Transactions chargées ✅", data);
+      console.log("Transactions chargées", data);
 
     } catch (err) {
       console.error("Erreur lors du chargement des transactions :", err);
@@ -90,7 +90,7 @@ const useTransactions = (userId: string) => {
       const data: Summary = await response.json();
 
       setSummary(data);
-      console.log("Résumé financier chargé ✅", data);
+      console.log("Résumé financier chargé ", data);
 
     } catch (err) {
       console.error("Erreur lors du chargement du résumé :", err);
@@ -115,7 +115,7 @@ const useTransactions = (userId: string) => {
       // Lance les deux requêtes en même temps (plus rapide qu'en séquence)
       await Promise.all([fetchTransactions(), fetchSummary()]);
 
-      console.log("Toutes les données chargées ✅");
+      console.log("Toutes les données chargées ");
 
     } catch (error) {
       console.error("Erreur lors du chargement des données :", error);
@@ -140,7 +140,7 @@ const useTransactions = (userId: string) => {
       // Vérifie que la suppression a réussi (status 2xx)
       if (!response.ok) throw new Error(`Échec de la suppression (status : ${response.status})`);
 
-      console.log("Transaction supprimée ✅ — rechargement des données...");
+      console.log("Transaction supprimée  — rechargement des données...");
 
       // Rafraîchit les données après suppression
       await loadData();
