@@ -1,5 +1,6 @@
 import { styles } from '@/assets/styles/home.styles';
 import BalanceCard from '@/components/BalanceCard';
+import NoTransactionsFound from '@/components/NoTransactionsFound';
 import PageLoader from '@/components/PageLoader';
 import { SignOutButton } from '@/components/SignOutButton';
 import TransactionItem from '@/components/TransactionItem';
@@ -38,10 +39,6 @@ export default function Page() {
   console.log("Transactions :", transactions);
   console.log("Résumé :", summary);
 
-  // ─────────────────────────────────────────────
-  // HANDLERS
-  // ─────────────────────────────────────────────
-
   // Demande confirmation avant de supprimer une transaction
   const handleDelete = (id: number): void => {
     Alert.alert(
@@ -54,16 +51,8 @@ export default function Page() {
     );
   };
 
-  // ─────────────────────────────────────────────
-  // ÉTATS DE CHARGEMENT
-  // ─────────────────────────────────────────────
-
   // Affiche un loader pendant le chargement des données
   if (isLoading) return <PageLoader />;
-
-  // ─────────────────────────────────────────────
-  // RENDU
-  // ─────────────────────────────────────────────
 
   return (
     <View style={styles.container}>
@@ -118,6 +107,8 @@ export default function Page() {
         renderItem={({ item }) => (
           <TransactionItem item={item} onDelete={handleDelete} />
         )}
+        ListEmptyComponent={<NoTransactionsFound />}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );

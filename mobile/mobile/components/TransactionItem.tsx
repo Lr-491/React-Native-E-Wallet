@@ -30,7 +30,7 @@ interface TransactionItemProps {
 const CATEGORY_ICONS: CategoryIconMap = {
   "Food & Drinks": "fast-food",
   Shopping: "cart",
-  Transport: "car",
+  Transportation: "car",
   Entertainment: "film",      
   Bills: "receipt",           
   Income: "cash",

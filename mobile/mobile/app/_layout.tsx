@@ -2,6 +2,7 @@ import SafeScreen from "@/components/SafeScreen";
 import { Slot } from "expo-router";
 import { ClerkProvider } from "@clerk/expo"; 
 import * as SecureStore from "expo-secure-store";
+import { StatusBar } from "react-native";
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 console.log(publishableKey);
@@ -22,6 +23,7 @@ export default function RootLayout() {
       <SafeScreen>
         <Slot />
       </SafeScreen>
+      <StatusBar barStyle={"dark-content"}/>
     </ClerkProvider>
   );
 }
